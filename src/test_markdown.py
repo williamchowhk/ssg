@@ -26,6 +26,130 @@ class TestMarkdown(unittest.TestCase):
         tar = extract_markdown_links(text)
         self.assertEqual(ref,tar)
 
+    def test_split_images(self):
+        node = TextNode("This is text with an image ![to boot dev](https://www.boot.dev) and ![to youtube](https://www.youtube.com/bootdotdev.jpg)", TextType.TEXT,)
+        tar = split_nodes_image([node])
+        ref = [ TextNode("This is text with an image ", TextType.TEXT),
+                TextNode("to boot dev", TextType.IMAGE, "https://www.boot.dev"),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("to youtube", TextType.IMAGE, "https://www.youtube.com/bootdotdev.jpg"),
+              ]
+        self.assertEqual(ref,tar)
+
+    def test_split_links(self):
+        node = TextNode("This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)", TextType.TEXT,)
+        tar = split_nodes_link([node])
+        ref = [ TextNode("This is text with a link ", TextType.TEXT),
+                TextNode("to boot dev", TextType.LINK, "https://www.boot.dev"),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("to youtube", TextType.LINK, "https://www.youtube.com/@bootdotdev"),
+              ]
+        self.assertEqual(ref,tar)
+
+    def test_text_to_textnodes(self):
+        tar = text_to_textnodes("This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
+        ref = [ TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+              ]
+        self.assertEqual(ref,tar)
+
+    def test_markdown_to_blocks(self):
+        tar = markdown_to_blocks('''# This is a heading
+
+This is a paragraph of text. It has some **bold** and *italic* words inside of it.
+
+* This is the first list item in a list block
+* This is a list item
+* This is another list item''')
+        ref = [ "# This is a heading",
+                "This is a paragraph of text. It has some **bold** and *italic* words inside of it.",
+                "* This is the first list item in a list block\n* This is a list item\n* This is another list item" ]
+        self.assertEqual(ref,tar)
+
+    def test_block_type_heading(self):
+        tar = [ block_to_block_type( "# heading" ),
+                block_to_block_type( "## heading" ),
+                block_to_block_type( "#### heading" ),
+                block_to_block_type( "###### heading" ),
+                block_to_block_type( "####### heading" ),
+                block_to_block_type( "#heading" ),
+                block_to_block_type( "heading" ),
+                block_to_block_type( "###" ) ]
+        ref = [ BlockType.HEADING,
+                BlockType.HEADING,
+                BlockType.HEADING,
+                BlockType.HEADING,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH ]
+        self.assertEqual(ref,tar)
+
+    def test_block_type_code(self):
+        tar = [ block_to_block_type( "```code```" ),
+                block_to_block_type( "```code1\ncode2\ncode3```" ),
+                block_to_block_type( "```code1\n```\ncode3```" ),
+                block_to_block_type( "``````" ),
+                block_to_block_type( "``code``" ),
+                block_to_block_type( "```code" ),
+                block_to_block_type( "code```" ),
+                block_to_block_type( "`code`" ),
+                block_to_block_type( "code```code```code" ),
+                block_to_block_type( "```" ) ]
+        ref = [ BlockType.CODE,
+                BlockType.CODE,
+                BlockType.CODE,
+                BlockType.CODE,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH ]
+        self.assertEqual(ref,tar)
+    
+    def test_block_type_quote(self):
+        tar = [ block_to_block_type( ">line1\n>line2" ),
+                block_to_block_type( ">line1" ),
+                block_to_block_type( ">line1\n>line2>line3" ),
+                block_to_block_type( ">>line1" ),
+                block_to_block_type( ">line1\nline2" ),
+                block_to_block_type( ">line1\n line2" ),
+                block_to_block_type( "line1" ) ]
+        ref = [ BlockType.QUOTE,
+                BlockType.QUOTE,
+                BlockType.QUOTE,
+                BlockType.QUOTE,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH,
+                BlockType.PARAGRAPH ]
+        self.assertEqual(ref,tar)
+
+    def test_block_type_list(self):
+        tar = [ block_to_block_type( "- line1\n- line2" ),
+                block_to_block_type( "* line1\n* line2" ),
+                block_to_block_type( "- line1" ),
+                block_to_block_type( "* line1" ),
+                block_to_block_type( "1. line1\n2. line2" ),
+                block_to_block_type( "1. line1\n2. line2\n3. line3" ),
+                block_to_block_type( "1. line1\n1. line2" ) ]
+        ref = [ BlockType.UNORDERED_LIST,
+                BlockType.UNORDERED_LIST,
+                BlockType.UNORDERED_LIST,
+                BlockType.UNORDERED_LIST,
+                BlockType.ORDERED_LIST,
+                BlockType.ORDERED_LIST,
+                BlockType.PARAGRAPH ]
+        self.assertEqual(ref,tar)
+
 if __name__ == "__main__":
     unittest.main()
 
