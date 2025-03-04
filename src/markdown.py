@@ -1,6 +1,7 @@
 import re
 from enum import Enum
-from textnode import TextNode, TextType
+from htmlnode import *
+from textnode import *
 
 class BlockType(Enum):
     PARAGRAPH = "paragraph"
@@ -109,7 +110,55 @@ def block_to_block_type(block):
 
     return BlockType.ORDERED_LIST
 
+def block_to_text(block, block_type):
+    texts = [block]
+    match block_type:
+        case BlockType.HEADING:
+            texts = [block[2:]]
+        case BlockType.CODE:
+            texts = [block[3:-3]]
+        case BlockType.QUOTE:
+            texts = block[1:].split("\n>")
+        case BlockType.UNORDERED_LIST:
+            if block[0] == "-":
+                texts = block[2:].split("\n-")
+            if block[0] == "*":
+                texts = block[2:].split("\n*")
+        case BlockType.ORDERED_LIST:
+            texts = re.split(r"\n\d+. ", block[3:])
+    return texts
 
+
+def markdown_to_html_node(markdown):
+    nodes = []
+    blocks = markdown_to_blocks(markdown)
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        texts = block_to_text(block,block_type)
+        match block_type:
+            case BlockType.HEADING:
+                nodes.append(LeafNode("h1", texts[0]))
+            case BlockType.CODE:
+                nodes.append(LeafNode("code", texts[0]))
+            case BlockType.QUOTE:
+                nodes.append(LeafNode("quote", texts[0]))
+        if block_type == BlockType.PARAGRAPH:
+            textnodes = text_to_textnodes(texts[0])
+            htmlnodes = []
+            for textnode in textnodes:
+                htmlnodes.append(text_node_to_html_node(textnode))
+            nodes.append(ParentNode("p", htmlnodes))
+        if block_type == BlockType.UNORDERED_LIST:
+            items = []
+            for text in texts:
+                items.append( LeafNode("li", text) )
+            nodes.append(ParentNode("ul", items))
+        if block_type == BlockType.ORDERED_LIST:
+            items = []
+            for text in texts:
+                items.append( LeafNode("li", text) )
+            nodes.append(ParentNode("ol", items))
+    return ParentNode("div", nodes)
 
 def extract_markdown_images(text):
     matches = re.findall(r"!\[([^\[\]]*)\]\(([^\(\)]*)\)", text)

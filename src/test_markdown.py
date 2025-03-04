@@ -150,6 +150,29 @@ This is a paragraph of text. It has some **bold** and *italic* words inside of i
                 BlockType.PARAGRAPH ]
         self.assertEqual(ref,tar)
 
+    def test_markdown_to_html(self):
+        tar = markdown_to_html_node(
+'''
+# Heading
+
+first paragraph
+
+```code```
+
+>item1
+>item2
+
+1. ol item1
+2. ol item2
+
+- ul item1
+- ul item2
+
+hello *world*
+
+''')
+        print(tar.to_html())
+
 if __name__ == "__main__":
     unittest.main()
 
